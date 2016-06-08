@@ -515,7 +515,6 @@ export default class Collection {
    * @return {Promise}
    */
   _updateRaw(oldRecord, newRecord, {synced = false} = {}) {
-    let updated;
     // Make sure to never loose the existing timestamp.
     if (oldRecord && oldRecord.last_modified && !newRecord.last_modified) {
       newRecord.last_modified = oldRecord.last_modified;
@@ -523,11 +522,10 @@ export default class Collection {
     // If only local fields have changed, then keep record as synced.
     const isIdentical = oldRecord && recordsEqual(oldRecord, newRecord, this.localFields);
     const keepSynced = isIdentical && oldRecord._status == "synced";
-    let newStatus = (keepSynced || synced) ? "synced" : "updated";
-    if (!oldRecord) {
-      newStatus = "created";
-    }
-    updated = markStatus(newRecord, newStatus);
+    const neverSynced = oldRecord && oldRecord._status == "created";
+    const newStatus = (keepSynced || synced) ? "synced"
+                                             : neverSynced ? "created" : "updated";
+    const updated = markStatus(newRecord, newStatus);
 
     return this.db.execute((transaction) => {
       transaction.update(updated);
